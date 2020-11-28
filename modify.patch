@@ -1,0 +1,716 @@
+commit 5ea44a1dad19887d75102e23883303d7a28e197f
+Author: yangyongda <546935748@qq.com>
+Date:   Sat Nov 28 12:00:35 2020 +0800
+
+    add youku-k1 driver and modify system
+
+diff --git a/build/target/product/core.mk b/build/target/product/core.mk
+index 519dbb8..b9cc5f8 100644
+--- a/build/target/product/core.mk
++++ b/build/target/product/core.mk
+@@ -22,37 +22,18 @@
+ 
+ PRODUCT_PACKAGES += \
+     BasicDreams \
+-    Browser \
+-    Calculator \
+-    Calendar \
+-    CalendarProvider \
+     CaptivePortalLogin \
+-    CertInstaller \
+-    Contacts \
+-    DeskClock \
+     DocumentsUI \
+     DownloadProviderUi \
+-    Email \
+-    Exchange2 \
+     ExternalStorageProvider \
+     FusedLocation \
+     InputDevices \
+-    KeyChain \
+     Keyguard \
+-    LatinIME \
+-    Launcher2 \
+     ManagedProvisioning \
+     PicoTts \
+     PacProcessor \
+     libpac \
+-    PrintSpooler \
+     ProxyHandler \
+-    QuickSearchBox \
+-    Settings \
+-    SharedStorageBackup \
+-    Telecom \
+-    TeleService \
+-    VpnDialogs \
+-    MmsService
++    SharedStorageBackup
+ 
+ $(call inherit-product, $(SRC_TARGET_DIR)/product/core_base.mk)
+diff --git a/build/target/product/core_base.mk b/build/target/product/core_base.mk
+index 6c29482..3be990e 100644
+--- a/build/target/product/core_base.mk
++++ b/build/target/product/core_base.mk
+@@ -21,10 +21,7 @@ PRODUCT_PROPERTY_OVERRIDES := \
+     ro.config.alarm_alert=Alarm_Classic.ogg
+ 
+ PRODUCT_PACKAGES += \
+-    ContactsProvider \
+     DefaultContainerService \
+-    Home \
+-    TelephonyProvider \
+     UserDictionaryProvider \
+     atrace \
+     libandroidfw \
+diff --git a/build/target/product/generic_no_telephony.mk b/build/target/product/generic_no_telephony.mk
+index cb93210..04d6c36 100644
+--- a/build/target/product/generic_no_telephony.mk
++++ b/build/target/product/generic_no_telephony.mk
+@@ -19,29 +19,14 @@
+ 
+ PRODUCT_PACKAGES := \
+     Bluetooth \
+-    Camera2 \
+-    Gallery2 \
+     MusicFX \
+-    OneTimeInitializer \
+     Provision \
+     WallpaperCropper
+ 
+-  #$_rbox_$_modify_$_by lly,low memory disable SystemUI    
+-ifneq ($(strip $(TARGET_BOARD_PLATFORM_PRODUCT)), box)
++
+ PRODUCT_PACKAGES += \
+-    Music	\
+-    SystemUI     
+-endif
+-ifeq ($(strip $(TARGET_BOARD_PLATFORM_PRODUCT)), box)
+-  ifeq ($(strip $(BOARD_USE_LOW_MEM)), true)
+-  PRODUCT_PACKAGES += \
+-      SimpleSystemUI 
+-  else
+-  PRODUCT_PACKAGES += \
+-      SystemUI     
+-  endif
+-endif
+-  #$_rbox_$_modify_$_end
++    SimpleSystemUI 
++
+ PRODUCT_PACKAGES += \
+     clatd \
+     clatd.conf \
+diff --git a/build/target/product/sdk_base.mk b/build/target/product/sdk_base.mk
+index 451c0b7..9cc0ab1 100644
+--- a/build/target/product/sdk_base.mk
++++ b/build/target/product/sdk_base.mk
+@@ -33,7 +33,6 @@ PRODUCT_PACKAGES := \
+ 	libWnnEngDic \
+ 	libWnnJpnDic \
+ 	LiveWallpapersPicker \
+-	Mms \
+ 	Music \
+ 	OpenWnn \
+ 	Protips \
+diff --git a/build/target/product/telephony.mk b/build/target/product/telephony.mk
+index da1497d..79c3c20 100644
+--- a/build/target/product/telephony.mk
++++ b/build/target/product/telephony.mk
+@@ -19,7 +19,6 @@
+ 
+ PRODUCT_PACKAGES := \
+     Dialer \
+-    Mms \
+     rild
+ 
+ PRODUCT_COPY_FILES := \
+diff --git a/device/rockchip/rk3288/device.mk b/device/rockchip/rk3288/device.mk
+index 005e5e5..6959823 100644
+--- a/device/rockchip/rk3288/device.mk
++++ b/device/rockchip/rk3288/device.mk
+@@ -15,13 +15,7 @@
+ #
+ 
+ PRODUCT_PACKAGES += \
+-    Launcher3 \
+-	fireflyapi
+-
+-#$_rbox_$_modify_$_zhengyang: add displayd
+-PRODUCT_PACKAGES += \
+-    displayd
+-
++    SF_Launcher
+ #enable this for support f2fs with data partion
+ #BOARD_USERDATAIMAGE_FILE_SYSTEM_TYPE := f2fs
+ # This ensures the needed build tools are available.
+@@ -98,5 +92,3 @@ $(call inherit-product, frameworks/native/build/tablet-10in-xhdpi-2048-dalvik-he
+ 
+ 
+ $(call inherit-product-if-exists, vendor/rockchip/rk3288/device-vendor.mk)
+-
+-$(call inherit-product-if-exists, vendor/rockchip/firefly/firefly.mk)
+diff --git a/device/rockchip/rk3288/init.rc b/device/rockchip/rk3288/init.rc
+index bfa9130..5478f6b 100644
+--- a/device/rockchip/rk3288/init.rc
++++ b/device/rockchip/rk3288/init.rc
+@@ -479,11 +479,6 @@ service logd /system/bin/logd
+     socket logdw dgram 0222 logd logd
+     seclabel u:r:logd:s0
+ 
+-service healthd /sbin/healthd
+-    class core
+-    critical
+-    seclabel u:r:healthd:s0
+-
+ service console /system/bin/sh
+     class core
+     console
+@@ -516,7 +511,6 @@ service servicemanager /system/bin/servicemanager
+     user system
+     group system
+     critical
+-    onrestart restart healthd
+     onrestart restart zygote
+     onrestart restart media
+     onrestart restart surfaceflinger
+@@ -544,13 +538,6 @@ service debuggerd /system/bin/debuggerd
+ service debuggerd64 /system/bin/debuggerd64
+     class main
+ 
+-service ril-daemon /system/bin/rild
+-    class main
+-    socket rild stream 660 root radio
+-    socket rild-debug stream 660 radio system
+-    user root
+-    group radio cache inet misc audio log
+-
+ service surfaceflinger /system/bin/surfaceflinger
+     class core
+     user system
+@@ -643,13 +630,6 @@ service drawpath /system/bin/drawpath
+        disabled
+        oneshot
+ 
+-service  catlog /system/bin/busybox  sh  /system/bin/cat_log.sh
+-     disabled
+-     oneshot
+-
+-# on property:sys.boot_completed=1
+-#   start catlog
+-
+ on property:app.logsave.start=1
+    start catlog
+ 
+diff --git a/device/rockchip/rk3288/rk3288.mk b/device/rockchip/rk3288/rk3288.mk
+index 497d0a9..6a4d284 100644
+--- a/device/rockchip/rk3288/rk3288.mk
++++ b/device/rockchip/rk3288/rk3288.mk
+@@ -33,3 +33,8 @@ PRODUCT_PROPERTY_OVERRIDES += \
+     ro.product.version = 1.0.0 \
+     ro.product.ota.host = www.rockchip.com:2300
+ 
++
++PRODUCT_COPY_FILES += \
++vendor/kube/libs/libcocos2dcpp.so:system/lib/libcocos2dcpp.so \
++vendor/kube/libs/libcocos-helper.so:system/lib/libcocos-helper.so
++
+diff --git a/device/rockchip/rk3288/rk3288_box/init.rc b/device/rockchip/rk3288/rk3288_box/init.rc
+index 84a0777..9b1d251 100644
+--- a/device/rockchip/rk3288/rk3288_box/init.rc
++++ b/device/rockchip/rk3288/rk3288_box/init.rc
+@@ -562,13 +562,6 @@ service debuggerd /system/bin/debuggerd
+ service debuggerd64 /system/bin/debuggerd64
+     class main
+ 
+-service ril-daemon /system/bin/rild -l /system/lib/libreference-ril.so
+-    class main
+-    socket rild stream 660 root radio
+-    socket rild-debug stream 660 radio system
+-    user root
+-    group radio cache inet misc audio log
+-
+ service surfaceflinger /system/bin/surfaceflinger
+     class core
+     user system
+diff --git a/device/rockchip/rk3288/rk3288_box/system.prop b/device/rockchip/rk3288/rk3288_box/system.prop
+index 6f1135e..809f0a8 100644
+--- a/device/rockchip/rk3288/rk3288_box/system.prop
++++ b/device/rockchip/rk3288/rk3288_box/system.prop
+@@ -24,7 +24,7 @@ ro.rk.screenoff_time=2147483647
+ ro.rk.screenshot_enable=true
+ ro.rk.def_brightness=200
+ ro.rk.homepage_base=http://www.t-firefly.com/en/firenow/firefly_rk3288
+-ro.rk.install_non_market_apps=false
++ro.rk.install_non_market_apps=true
+ sys.hwc.compose_policy=6
+ sys.wallpaper.rgb565=0
+ sf.power.control=2073600
+diff --git a/frameworks/base/packages/SettingsProvider/res/values/defaults.xml b/frameworks/base/packages/SettingsProvider/res/values/defaults.xml
+index d0612cf..6d96c24 100644
+--- a/frameworks/base/packages/SettingsProvider/res/values/defaults.xml
++++ b/frameworks/base/packages/SettingsProvider/res/values/defaults.xml
+@@ -53,7 +53,7 @@
+ 
+     <bool name="def_bluetooth_on">false</bool>
+     <bool name="def_wifi_display_on">false</bool>
+-    <bool name="def_install_non_market_apps">false</bool>
++    <bool name="def_install_non_market_apps">true</bool>
+     <bool name="def_package_verifier_enable">true</bool>
+     <!-- Comma-separated list of location providers.
+          Network location is off by default because it requires
+diff --git a/kernel/arch/arm/boot/dts/firefly-rk3288.dts b/kernel/arch/arm/boot/dts/firefly-rk3288.dts
+index b8b8c23..b7f789b 100644
+--- a/kernel/arch/arm/boot/dts/firefly-rk3288.dts
++++ b/kernel/arch/arm/boot/dts/firefly-rk3288.dts
+@@ -85,6 +85,15 @@
+ 		};
+ 	};
+ 
++ 	leds {
++       compatible = "gpio-leds";
++       power {
++           label = "firefly:blue:power";
++           default-state = "on";
++           gpios = <&gpio7 GPIO_A2 GPIO_ACTIVE_HIGH>;
++       };
++    }; 
++   
+ 	codec_hdmi_i2s: codec-hdmi-i2s {
+ 		compatible = "hdmi-i2s";
+ 	};
+@@ -94,7 +103,7 @@
+ 	};
+ 
+ 	rockchip-hdmi-i2s {
+-		status = "disabled";
++		status = "okay";
+ 		compatible = "rockchip-hdmi-i2s";
+ 		dais {
+ 			dai0 {
+@@ -132,50 +141,13 @@
+ 		};
+ 	};
+ 
+-
+-	rockchip-es8323 {
+-		compatible = "rockchip-es8323";
+-		dais {
+-			dai0 {
+-				audio-codec = <&es8323>;
+-				audio-controller = <&i2s>;
+-				format = "i2s";
+-				//continuous-clock;
+-				//bitclock-inversion;
+-				//frame-inversion;
+-				//bitclock-master;
+-				//frame-master;
+-			};
+-		};
+-	};
+ 	rkxx-remotectl{
+ 		compatible = "rockchip,remotectl";
+-                module-gpios = <&gpio7 GPIO_A0 GPIO_ACTIVE_LOW>;
++        module-gpios = <&gpio7 GPIO_A0 GPIO_ACTIVE_LOW>;
+         led-power = <&gpio8 GPIO_A1 GPIO_ACTIVE_LOW>;
+ 		status = "disabled";
+ 	};
+ 	
+-	firefly-led{
+-		compatible = "firefly,led";
+-		led-work = <&gpio8 GPIO_A2 GPIO_ACTIVE_LOW>;
+-		led-power = <&gpio8 GPIO_A1 GPIO_ACTIVE_LOW>;
+-		status = "okay";
+-	};
+- 	leds {
+-       compatible = "gpio-leds";
+-       power {
+-           label = "firefly:blue:power";
+-           linux,default-trigger = "ir-power-click";
+-           default-state = "on";
+-           gpios = <&gpio8 GPIO_A1 GPIO_ACTIVE_LOW>;
+-       };  
+-        user {
+-           label = "firefly:yellow:user";
+-           linux,default-trigger = "ir-user-click";
+-           default-state = "off";
+-           gpios = <&gpio8 GPIO_A2 GPIO_ACTIVE_LOW>;
+-       };  
+-   }; 
+ 	atx8_unsetup{
+ 		compatible = "firefly,noatx8";
+ 		atx8-rst = <&gpio7 GPIO_C5 GPIO_ACTIVE_HIGH>;
+@@ -185,6 +157,7 @@
+ 		compatible = "rockchip,rk3288-usb-control";
+ 
+ 		host_drv_gpio = <&gpio0 GPIO_B6 GPIO_ACTIVE_LOW>;
++		host_en_gpio = <&gpio7 GPIO_A3 GPIO_ACTIVE_LOW>;
+ 		otg_drv_gpio = <&gpio0 GPIO_B4 GPIO_ACTIVE_LOW>;
+ 
+ 		rockchip,remote_wakeup;
+@@ -197,7 +170,7 @@
+ //	pmu_enable_level = <1>; //1->HIGH, 0->LOW
+ //	power-gpio = <&gpio0 GPIO_A6 GPIO_ACTIVE_HIGH>;
+ 	reset-gpio = <&gpio4 GPIO_B0 GPIO_ACTIVE_LOW>;
+-	phy-mode = "rgmii";
++	phy-mode = "rmii";
+ 	clock_in_out = "input";
+ 	tx_delay = <0x1d>;
+ 	rx_delay = <0x16>;
+@@ -317,48 +290,12 @@
+         reg = <0x00>;
+         spi-max-frequency = <48000000>;
+     };
+-	/*
+-	spi_test@00 {
+-     		compatible = "rockchip,spi_test_bus0_cs0";
+-                reg = <0>;
+-                spi-max-frequency = <24000000>;
+-                //spi-cpha;
+-		//spi-cpol;
+-                poll_mode = <0>;
+-	        type = <0>;
+-		enable_dma = <0>;
+-
+-	};
+-
+-	spi_test@01 {
+-	        compatible = "rockchip,spi_test_bus0_cs1";
+-	        reg = <1>;
+-	        spi-max-frequency = <24000000>;
+-	        spi-cpha;
+-		spi-cpol;
+-	        poll_mode = <0>;
+-	        type = <0>;
+-		enable_dma = <0>;	        
+-	};
+-	*/
+ };
+ 
+ &spi1 {
+ 	status = "disabled";
+ 	max-freq = <48000000>;
+-	/*
+-	spi_test@10 {
+-	        compatible = "rockchip,spi_test_bus1_cs0";
+-	        reg = <0>;
+-	        spi-max-frequency = <24000000>;
+-	        //spi-cpha;
+-		//spi-cpol;
+-	        poll_mode = <0>;
+-	        type = <0>;
+-		enable_dma = <0>;
+-	};
+ 
+-	*/
+ 	//dtv: connect to dtv demodulator for control signal
+ 	tstv-ctrl@00 {
+ 		compatible = "rockchip,dtv_spi_ctrl";
+@@ -375,35 +312,6 @@
+ 
+ };
+ 
+-&spi2 {
+-	status = "disabled";
+-	max-freq = <48000000>;
+-	/*
+-	spi_test@20 {
+-	        compatible = "rockchip,spi_test_bus2_cs0";
+-	        reg = <0>;
+-	        spi-max-frequency = <24000000>;
+-	        //spi-cpha;
+-		//spi-cpol;
+-	        poll_mode = <0>;
+-	        type = <0>;
+-		enable_dma = <0>;
+-	};
+-
+-	spi_test@21 {
+-	        compatible = "rockchip,spi_test_bus2_cs1";
+-	        reg = <1>;
+-	        spi-max-frequency = <24000000>;
+-	        //spi-cpha;
+-		//spi-cpol;
+-	        poll_mode = <0>;
+-	        type = <0>;
+-		enable_dma = <0>;
+-	};
+-	*/
+-};
+-
+-
+ 
+ &uart_bt {
+         status = "okay";
+@@ -510,62 +418,8 @@
+                 flip-x = <0>;
+                 flip-y = <0>;
+         };
+-     	mt@40 {
+-		status = "disabled";
+-               	compatible = "firefly,gsl3680";
+-              	reg = <0x40>;
+-               	touch-gpio = <&gpio5 GPIO_B0 IRQ_TYPE_EDGE_RISING>;
+-               	reset-gpio = <&gpio7 GPIO_B1 GPIO_ACTIVE_LOW>;
+-               	max-y = <2048>;
+-               	max-x = <1536>;
+-		flip-x = <1>;
+-		flip-y = <1>;
+-		swap-xy = <0>;
+-        };
+-
+-        ts@41 {
+-		status = "disabled";
+-        	compatible = "firefly,gsl3680";
+-      		reg = <0x41>;
+-         	touch-gpio = <&gpio8 GPIO_A7 IRQ_TYPE_EDGE_RISING>;
+-         	//reset-gpio = <&gpio8 GPIO_A6 GPIO_ACTIVE_LOW>;
+-         	max-x = <1280>;
+-         	max-y = <800>;
+-		flip-x = <0>;
+-		flip-y = <0>;
+-		swap-xy = <1>;
+-    	};
+-        mpu6050:mpu@68{
+-            status = "disabled";
+-            compatible = "mpu6050";
+-            reg = <0x68>;
+-            mpu-int_config = <0x10>;
+-            mpu-level_shifter = <0>;
+-            mpu-orientation = <0 1 0 1 0 0 0 0 1>;
+-            orientation-x= <1>;
+-            orientation-y= <1>;
+-            orientation-z= <1>;
+-            irq-gpio = <&gpio5 GPIO_B4 IRQ_TYPE_LEVEL_LOW>;
+-            mpu-debug = <0>;
+-        };
+-
+-
+ };
+ 
+-&i2c2 {
+-	status = "okay";
+-	es8323: es8323@10 {
+-	    compatible = "es8323";
+-		reg = <0x10>;
+-		earphone-con-gpio = <&gpio0 GPIO_B2 GPIO_ACTIVE_HIGH>;
+-		hp-det-gpio = <&gpio7 GPIO_B7 GPIO_ACTIVE_HIGH>;
+-		hp-mic-only = <1>;
+-		clocks = <&clk_i2s>, <&clk_i2s_out>;
+-		clock-names = "i2s_clk","i2s_mclk";
+-		pinctrl-names = "default";
+-		pinctrl-0 = <&i2s_mclk>;
+-	};
+-};
+ 
+ &i2c3 {
+ 	status = "okay";
+@@ -596,14 +450,6 @@
+ 		boot_depop = <1>;
+ 		pa_enable_time = <5000>;
+ 	};
+-	vga_ddc@50 {
+-		compatible = "firefly,vga_ddc";
+-		reg = <0x50>;
+-		gpio-pwn = <&gpio0 GPIO_C1 GPIO_ACTIVE_HIGH>;
+-		rockchip,source = <0>; //0: LCDC0; 1: LCDC1
+-		rockchip,prop = <PRMRY>;//<EXTEND>
+-		status = "okay";
+-	};
+ };
+ 
+ &i2c5 {
+@@ -647,7 +493,7 @@
+ 
+ &hdmi {
+ 	status = "okay";
+-	rockchips,hdmi_audio_source = <0>;
++	rockchips,hdmi_audio_source = <1>;
+ 	hdmi_cec = <0>;
+ };
+ 
+@@ -662,19 +508,7 @@
+ 		compatible = "rockchip,key";
+ 		
+ 		io-channels = <&adc 1>;
+-		/*
+-		vol-up-key {
+-			linux,code = <115>;
+-			label = "volume up";
+-			rockchip,adc_value = <1>;
+-		};
+ 
+-		vol-down-key {
+-			linux,code = <114>;
+-			label = "volume down";
+-			rockchip,adc_value = <170>;
+-		};
+-		*/
+ 		power-key {
+ 			gpios = <&gpio0 GPIO_A5 GPIO_ACTIVE_LOW>;
+ 			linux,code = <116>;
+@@ -686,30 +520,6 @@
+ 			label = "recovery";
+ 			rockchip,adc_value = <4>;
+ 		};
+-		/*
+-		menu-key {
+-			linux,code = <59>;
+-			label = "menu";
+-			rockchip,adc_value = <355>;
+-		};
+-
+-		home-key {
+-			linux,code = <102>;
+-			label = "home";
+-			rockchip,adc_value = <746>;
+-		};
+-
+-		back-key {
+-			linux,code = <158>;
+-			label = "back";
+-			rockchip,adc_value = <560>;
+-		};
+-
+-		camera-key {
+-			linux,code = <212>;
+-			label = "camera";
+-			rockchip,adc_value = <450>;
+-		};*/
+ 	};
+ };
+ 
+@@ -1063,28 +873,7 @@
+ &sdmmc0_vdd_domain{
+ 	regulator-name = "vcc_sd";			
+ 	};
+-/*
+-&remotectl {
+-	handle_cpu_id = <1>;
+-	status = "okay";
+-	ir_key1{
+-		rockchip,usercode = <0xff00>;
+-		rockchip,key_table =
+-			<0xeb   KEY_POWER>,
+-			<0xec   KEY_MENU>,
+-			<0xfe   KEY_BACK>,
+-			<0xb7   KEY_HOME>,
+-			<0xa3   250>,
+-			<0xf4   KEY_VOLUMEUP>,
+-			<0xa7   KEY_VOLUMEDOWN>,
+-			<0xf8   KEY_REPLY>,
+-			<0xfc   KEY_UP>,
+-			<0xfd   KEY_DOWN>,
+-			<0xf1   KEY_LEFT>,
+-			<0xe5   KEY_RIGHT>;
+-	};
+-};
+-*/
++
+ /*
+  * Due to not have the software of PWM for remotectrl.
+  * We can _*HACK*_ do that as the following.
+@@ -1098,18 +887,18 @@
+ 	ir_key1{
+ 		rockchip,usercode = <0xff00>;
+ 		rockchip,key_table =
+-			<0xeb   KEY_POWER>,
+-			<0xec   KEY_MENU>,
+-			<0xfe   KEY_BACK>,
+-			<0xb7   KEY_HOME>,
+-			<0xa3   250>,
+-			<0xf4   KEY_VOLUMEUP>,
+-			<0xa7   KEY_VOLUMEDOWN>,
++			<0xe7   KEY_POWER>,
++			<0xfb   KEY_MENU>,
++			<0xbf   KEY_BACK>,
++			<0xb1   KEY_HOME>,
++			<0xeb   KEY_VOLUMEUP>,
++			<0xef   KEY_VOLUMEDOWN>,
+ 			<0xf8   KEY_REPLY>,
+-			<0xfc   KEY_UP>,
+-			<0xfd   KEY_DOWN>,
+-			<0xf1   KEY_LEFT>,
+-			<0xe5   KEY_RIGHT>;
++			<0xb9   KEY_UP>,
++			<0xe9   KEY_DOWN>,
++			<0xb8   KEY_LEFT>,
++			<0xea   KEY_RIGHT>,
++			<0xaa	KEY_ENTER>;
+ 	};
+ };
+ 
+@@ -1117,3 +906,7 @@
+     status = "okay";
+     rockchip,atboot = <0>;
+ };
++
++&usb0 {
++	rockchip,usb-mode = <1>;
++};
+\ No newline at end of file
+diff --git a/kernel/arch/arm/configs/firefly_defconfig b/kernel/arch/arm/configs/firefly_defconfig
+index f2dea18..273fbb9 100644
+--- a/kernel/arch/arm/configs/firefly_defconfig
++++ b/kernel/arch/arm/configs/firefly_defconfig
+@@ -299,7 +299,7 @@ CONFIG_USB_SIERRA_NET=y
+ CONFIG_RTL8188EU=y
+ CONFIG_ESP8089=y
+ CONFIG_RKWIFI=y
+-CONFIG_AP6335=y
++CONFIG_AP6210=y
+ # CONFIG_INPUT_MOUSEDEV is not set
+ CONFIG_INPUT_EVDEV=y
+ CONFIG_INPUT_KEYRESET=y
+@@ -392,15 +392,6 @@ CONFIG_REGULATOR_RT5036=y
+ CONFIG_ROCKCHIP_PWM_REGULATOR=y
+ CONFIG_REGULATOR_SYR82X=y
+ CONFIG_REGULATOR_RICOH619=y
+-CONFIG_MEDIA_SUPPORT=y
+-CONFIG_MEDIA_CAMERA_SUPPORT=y
+-CONFIG_MEDIA_RC_SUPPORT=y
+-CONFIG_MEDIA_CONTROLLER=y
+-CONFIG_VIDEO_V4L2_SUBDEV_API=y
+-CONFIG_MEDIA_USB_SUPPORT=y
+-CONFIG_USB_VIDEO_CLASS=y
+-CONFIG_V4L_PLATFORM_DRIVERS=y
+-CONFIG_RK30_CAMERA_ONEFRAME=y
+ CONFIG_MALI_MIDGARD=m
+ CONFIG_MALI_MIDGARD_DVFS=y
+ CONFIG_MALI_MIDGARD_RT_PM=y
+@@ -432,8 +423,6 @@ CONFIG_RK_HDMI=y
+ CONFIG_RK_TVENCODER=y
+ CONFIG_ROCKCHIP_RGA=y
+ CONFIG_ROCKCHIP_RGA2=y
+-CONFIG_FIREFLY_VGA=y
+-CONFIG_FIREFLY_VGA_OUT_ONLY=y
+ CONFIG_FIREFLY_RGB2HDMI=y
+ CONFIG_SOUND=y
+ CONFIG_SND=y
+diff --git a/vendor/kube/Launcher/Android.mk b/vendor/kube/Launcher/Android.mk
+new file mode 100644
+index 0000000..92c529c
+--- /dev/null
++++ b/vendor/kube/Launcher/Android.mk
+@@ -0,0 +1,11 @@
++LOCAL_PATH := $(call my-dir)
++include $(CLEAR_VARS)
++LOCAL_MODULE := SF_Launcher
++LOCAL_MODULE_CLASS := APPS
++LOCAL_MODULE_TAGS := optional
++LOCAL_BUILT_MODULE_STEM := package.apk
++LOCAL_MODULE_SUFFIX := $(COMMON_ANDROID_PACKAGE_SUFFIX)
++LOCAL_CERTIFICATE := platform
++LOCAL_SRC_FILES := $(LOCAL_MODULE).apk
++LOCAL_MODULE_PATH := $(TARGET_OUT_APPS)
++include $(BUILD_PREBUILT)
+diff --git a/vendor/kube/Launcher/SF_Launcher.apk b/vendor/kube/Launcher/SF_Launcher.apk
+new file mode 100755
+index 0000000..324767e
+Binary files /dev/null and b/vendor/kube/Launcher/SF_Launcher.apk differ
+diff --git a/vendor/kube/libs/libcocos-helper.so b/vendor/kube/libs/libcocos-helper.so
+new file mode 100755
+index 0000000..b131ac4
+Binary files /dev/null and b/vendor/kube/libs/libcocos-helper.so differ
+diff --git a/vendor/kube/libs/libcocos2dcpp.so b/vendor/kube/libs/libcocos2dcpp.so
+new file mode 100755
+index 0000000..f43dc28
+Binary files /dev/null and b/vendor/kube/libs/libcocos2dcpp.so differ
